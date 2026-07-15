@@ -14,25 +14,27 @@ spreadsheet_url = os.environ.get("CONNECTIONS_GSHEETS_SPREADSHEET")
 
 # 3. Tenta conectar e ler os dados
 try:
-    if spreadsheet_url:
-        # Passamos as configurações de conexão diretamente como argumentos adicionais (kwargs) 
-        # para que o conector não dependa obrigatoriamente do st.secrets!
-        conn = st.connection(
-            "gsheets",
-            type=GSheetsConnection,
-            spreadsheet=spreadsheet_url
-        )
-    else:
-        conn = st.connection("gsheets", type=GSheetsConnection)
+    # Inicializa a conexão de forma limpa
+    conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # Lendo a aba "Energia" (conforme a sua planilha)
-    df_energia = conn.read(worksheet="Energia", ttl=0)
+    if spreadsheet_url:
+        # Se houver a URL no ambiente do Render, passa ela diretamente no .read()
+        df_energia = conn.read(spreadsheet=spreadsheet_url, worksheet="Energia", ttl=0)
+    else:
+        # Caso contrário (ex: rodando localmente com secrets), lê usando as configurações padrão
+        df_energia = conn.read(worksheet="Energia", ttl=0)
     
     st.success("Conectado ao Banco de Dados com sucesso!")
     
     if not df_energia.empty:
         # Cria o gráfico interativo de linha
-        fig_ener = px.line(df_energia, x="mes_referencia", y="consumo_kwh", color="unidade", title="Consumo de Energia (kWh)")
+        fig_ener = px.line(
+            df_energia, 
+            x="mes_referencia", 
+            y="consumo_kwh", 
+            color="unidade", 
+            title="Consumo de Energia (kWh)"
+        )
         st.plotly_chart(fig_ener, use_container_width=True)
     else:
         st.info("Nenhum dado de energia registrado para exibir nos gráficos.")
