@@ -12,15 +12,17 @@ st.subheader("Rede Calábria — Painel de Gestão")
 # 2. Resgata a URL da planilha configurada no Render
 spreadsheet_url = os.environ.get("CONNECTIONS_GSHEETS_SPREADSHEET")
 
-# 3. Tenta conectar de forma direta e segura
+# 3. Força a configuração do segredo antes de iniciar a conexão
+if spreadsheet_url:
+    # Usamos o método .update() para contornar o bloqueio de atribuição direta do Streamlit
+    st.secrets.update({"connections": {"gsheets": {"spreadsheet": spreadsheet_url}}})
+
+# 4. Tenta conectar e ler os dados
 try:
-    if spreadsheet_url:
-        # Passamos a URL diretamente aqui para evitar o bloqueio do Streamlit!
-        conn = st.connection("gsheets", type=GSheetsConnection, spreadsheet=spreadsheet_url)
-    else:
-        conn = st.connection("gsheets", type=GSheetsConnection)
+    # A conexão agora lê a configuração injetada acima
+    conn = st.connection("gsheets", type=GSheetsConnection)
     
-    # Lendo a aba "Energia" (com E maiúsculo conforme sua planilha oficial)
+    # Lendo a aba "Energia" (conforme a sua planilha)
     df_energia = conn.read(worksheet="Energia", ttl=0)
     
     st.success("Conectado ao Banco de Dados com sucesso!")
