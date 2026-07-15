@@ -4,30 +4,34 @@ import plotly.express as px
 import os
 from streamlit_gsheets import GSheetsConnection
 
+# 1. Configuração de visualização da página
 st.set_page_config(page_title="Rede Calábria Ambiental", layout="wide")
 st.title("🌿 Portal de Sustentabilidade Ambiental")
 st.subheader("Rede Calábria — Painel de Gestão")
 
-# O PULO DO GATO: Se o Render tiver a variável de ambiente, nós forçamos o Streamlit a lê-la
+# 2. Resgata a URL da planilha configurada no Render
 spreadsheet_url = os.environ.get("CONNECTIONS_GSHEETS_SPREADSHEET")
 
-if spreadsheet_url:
-    # Injeta a URL diretamente na configuração interna do Streamlit antes de conectar
-    st.secrets["connections"] = {"gsheets": {"spreadsheet": spreadsheet_url}}
-
+# 3. Tenta conectar de forma direta e segura
 try:
-    # Agora a conexão é feita de forma segura
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_energia = conn.read(worksheet="energia", ttl=0)
+    if spreadsheet_url:
+        # Passamos a URL diretamente aqui para evitar o bloqueio do Streamlit!
+        conn = st.connection("gsheets", type=GSheetsConnection, spreadsheet=spreadsheet_url)
+    else:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+    
+    # Lendo a aba "Energia" (com E maiúsculo conforme sua planilha oficial)
+    df_energia = conn.read(worksheet="Energia", ttl=0)
     
     st.success("Conectado ao Banco de Dados com sucesso!")
     
     if not df_energia.empty:
+        # Cria o gráfico interativo de linha
         fig_ener = px.line(df_energia, x="mes_referencia", y="consumo_kwh", color="unidade", title="Consumo de Energia (kWh)")
         st.plotly_chart(fig_ener, use_container_width=True)
     else:
         st.info("Nenhum dado de energia registrado para exibir nos gráficos.")
         
 except Exception as e:
-    st.info("Aguardando configuração das variáveis de ambiente...")
-    st.caption(f"Status detalhado do erro: {e}")
+    st.error("Erro ao carregar os dados:")
+    st.caption(f"Status do sistema: {e}")
